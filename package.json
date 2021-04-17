@@ -1,0 +1,28 @@
+{
+  "name": "employee-tracker-inquirer-sql",
+  "version": "1.0.0",
+  "description": "This app runs on the back end to write a DB that keeps track of employees in node with inquirer",
+  "main": "employeeConnection.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node employeeConnection.js",
+    "watch": "nodemon employeeConnection.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jayyousef/employee-tracker-inquirer-sql.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jayyousef/employee-tracker-inquirer-sql/issues"
+  },
+  "homepage": "https://github.com/jayyousef/employee-tracker-inquirer-sql#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.7"
+  },
+  "dependencies": {
+    "console.table": "^0.10.0"
+  }
+}
