@@ -524,9 +524,7 @@ const addDepartment = () => {
         }
       )
     }).catch((err) => console.error('Promise rejected:', err))
-}
-
-// DELETE FROM table_name WHERE condition;
+} 
 
 // connect to the mysql server and sql database
 connection.connect((err) => {
