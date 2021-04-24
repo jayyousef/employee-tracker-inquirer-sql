@@ -5,8 +5,7 @@ const connection = require('./db/connection');
 const {
   query
 } = require('./db/connection');
-const { 
-} = require('inquirer/lib/utils/utils');
+const {} = require('inquirer/lib/utils/utils');
 
 /**
  * when you connect/start up the application
@@ -23,11 +22,11 @@ const start = () => {
       name: 'start',
       type: 'list',
       message: 'What would you like to do?',
-      choices: ['View Employees', 'Add to the Database', 'Remove Employee', 'Update Database', 'Exit'],
+      choices: ['View Employees, Roles, or Departments', 'Add to the Database', 'Remove Employee', 'Update Employee Role', 'Exit'],
     })
     .then((answer) => {
       switch (answer.start) {
-        case 'View Employees':
+        case 'View Employees, Roles, or Departments':
           viewEmployees();
           break;
 
@@ -36,10 +35,10 @@ const start = () => {
           break;
 
         case 'Remove Employee':
-          removeFromDB();
+          removeEmployee();
           break;
 
-        case 'Update Database':
+        case 'Update Employee Role':
           updateDB();
           break;
 
@@ -57,8 +56,8 @@ const viewEmployees = () => {
     .prompt({
       name: 'view',
       type: 'list',
-      message: 'How would you like to view?',
-      choices: ['View All Employees', 'View Employees By Department', 'View Employees By Manager', 'Return to start'],
+      message: 'What would you like to view?',
+      choices: ['View All Employees', 'View Employees By Department', 'View Employees By Manager', 'View Departments', 'View Roles', 'Return to start'],
     })
     //based on their response this function will call the correct function to query the DB and then take the back to the beginning of the app after the funtion is run
     .then((answer) => {
@@ -75,6 +74,14 @@ const viewEmployees = () => {
           employeesByManager();
           break;
 
+        case 'View Departments':
+          viewDepartments();
+          break;
+
+        case 'View Roles':
+          viewRoles();
+          break;
+
         case 'Return to start':
           start();
           break;
@@ -87,6 +94,31 @@ const viewEmployees = () => {
       }
     })
 }
+
+const viewDepartments = () => {
+  const query = `SELECT id,
+  name from department`
+  connection.query(query, (err, results) => {
+    if (err) throw err;
+    console.table(results)
+    setTimeout(returningPrompt, 1000);
+    setTimeout(start, 3000);
+  })
+};
+
+const viewRoles = () => {
+  const query = `SELECT role.id,title, salary, department.name as department
+  from role
+  left join department on department_id=department.id`
+  connection.query(query, (err, results) => {
+    if (err) throw err;
+    const employees = results;
+    console.table(employees)
+    setTimeout(returningPrompt, 1000);
+    setTimeout(start, 3000);
+  })
+}
+
 //this function is run when the user asks to see all employees. then it takes them back to the start()
 const viewAllEmployees = () => {
   const query = `SELECT
@@ -110,7 +142,7 @@ const employeesByDepartment = () => {
   let departments;
   const getDepartments = () =>
     new Promise((resolve, reject) => {
-      connection.query('SELECT name FROM department', (err, results) => {
+      connection.query('SELECT id,name FROM department', (err, results) => {
         if (err) reject(new Error('There was an error: ', err));
         departments = results
         resolve(departments)
@@ -216,29 +248,8 @@ const askManager = (managers) => {
     })
 }
 
-const getEmployees = () => {
-  let employees;
-  new Promise((resolve, reject) =>
-    connection.query('SELECT first_name,last_name FROM employee', (err, results) => {
-      if (err) reject(new Error('There was an error: ', err));
-      employees = JSON.parse(JSON.stringify(results));
-      resolve(employees)
-    }))
-}
-
-const removeEmployee = () => {
-  //first we need to retrive the list of employees to use in the inquirer question
-  getEmployees()
-    .then(() => {
-      askEmployee(employees)
-    })
-    .catch((err) => console.error('Promise rejected:', err))
-}
-
 //THIS IS A DELETE FUNCTION
 const askEmployee = (employees) => {
-  //TODO need to take the object and turn it into an array of [first_name last_name]
-  //need to turn the employees into an array that can be read by inquirer
   inquirer
     .prompt([{
       name: 'employee',
@@ -246,19 +257,41 @@ const askEmployee = (employees) => {
       message: 'Select the name of the employee you would like to delete:',
       choices: employees
     }]).then((answer) => {
-      //TODO: need to separate the values of the chosen employee into separate values to be inputted to SQL
+      const employeeFullName = answer.employee
+      const employeeName = employeeFullName.split(" ")
+      firstName = employeeName[0]
+      lastName = employeeName[1]
       connection.query(
         'DELETE FROM employee WHERE first_name=? AND last_name=?',
-        [first_name, last_name],
+        [firstName, lastName],
         (err, res) => {
           if (err) throw err;
-          console.log(`Deleting ${res.affectedRows} from the database!\n`);
-          console.log(`Deleting ${first_name} ${last_name} from the Employee Database..\n`);
+          console.log(`Deleting ${employeeFullName} from the Employee Database...\n`);
         }
       )
-      start()
+      setTimeout(returningPrompt, 1000);
+      setTimeout(start, 3000);
     })
 }
+//this function retrieves an employee and then passes it to the delete function above askEmployee()
+const removeEmployee = () => {
+  //first we need to retrive the list of employees to use in the inquirer question
+  const getEmployees =
+    new Promise((resolve, reject) => {
+      connection.query(`SELECT concat(first_name,' ',last_name) as name FROM employee`, (err, results) => {
+        if (err) reject(new Error('There was an error: ', err));
+        const employeeArray = results.map((i) => i.name);
+        const uniqueEmployees = [...new Set(employeeArray)];
+        resolve(uniqueEmployees)
+      })
+    })
+
+getEmployees.then((employeeList) => {
+    askEmployee(employeeList)
+  })
+  .catch((err) => console.error('Promise rejected:', err))
+}
+
 
 const addToDB = () => {
   inquirer
@@ -266,7 +299,7 @@ const addToDB = () => {
       name: 'add',
       type: 'list',
       message: 'What would you like to add',
-      choices: ['Add a new Employee', 'Add a new role', 'Add a new department', 'Return to start'],
+      choices: ['Add a new Employee', 'Add a new role', 'Add a new department', 'Return to Start'],
     })
     //based on their response this function will call the correct function to query the DB and then take the back to the beginning of the app after the funtion is run
     .then((answer) => {
@@ -375,7 +408,7 @@ const askEmployeeInformation = (employees, roles) => {
     })
 }
 
-
+//this function passes the manager ID and returns the ID number of the same manager
 const getManagerID = (firstName, lastName, role_id, managerid_firstName, managerid_lastName) => {
   const getManagerID = () =>
     new Promise((resolve, reject) => {
@@ -407,8 +440,7 @@ const getRoleId = (firstName, lastName, role_id, managerMapped) => {
     })
     .catch((err) => console.error('Promise rejected:', err))
 }
-//TODO - UNHANDLES PROMISE REJECTION @ RESOLVE(RES)
-//&& CANNOT RETURN ${res.affectedRows} OF UNDEFINED
+
 const addEmployeeQuery = (firstName, lastName, role, managerNumber) => {
   let query;
   if (managerNumber === null) {
@@ -439,7 +471,7 @@ const getDepartmentsAddRole = () => {
       if (err) reject(new Error('There was an error: ', err));
       resolve(results)
     }))
-    departmentsPromise.then((results) => {
+  departmentsPromise.then((results) => {
       const deparmentsObject = results.map((i) => i.name);
       const uniqueDepartments = [...new Set(deparmentsObject)];
       askNewRole(uniqueDepartments)
@@ -455,11 +487,11 @@ const getDepartmentIDAddRole = (roleTitle, roleSalary, departmentName) => {
     })
   })
   getDepartments.then((departments) => {
-    console.log('thisis departments',departments)
+      console.log('thisis departments', departments)
       const departmentObject = departments.map((i) => i.id);
-      console.log('thisis departmentObject',departmentObject)
+      console.log('thisis departmentObject', departmentObject)
       const departmentID = departmentObject[0]
-      console.log('thisis departmentID',departmentID)
+      console.log('thisis departmentID', departmentID)
       addNewRole(roleTitle, roleSalary, departmentID)
     })
     .catch((err) => console.error('Promise rejected:', err))
@@ -476,7 +508,7 @@ const addNewRole = (newRole, newSalary, newDepartmentID) => {
         resolve(res)
       })
     })
-    addRolePromise.then(() => {
+  addRolePromise.then(() => {
     console.log(`Adding ${newRole} to the Employee Database..\n`);
     setTimeout(returningPrompt, 1000);
     setTimeout(start, 3000);
@@ -503,6 +535,78 @@ const askNewRole = (deparmentsArray) => {
     }).catch((err) => console.error('Promise rejected:', err))
 }
 
+const updateDB = () => {
+  const employees = new Promise((resolve, reject) => {
+    const query = `SELECT CONCAT(first_name,' ',last_name) AS name
+  from employee`
+    connection.query(query, (err, results) => {
+      if (err) reject(new Error('There was an error: ', err));
+      resolve(results)
+    })
+  })
+  employees.then((results) => {
+      const employeesArray = results.map((i) => i.name);
+      const uniqueEmployees = [...new Set(employeesArray)];
+      updateGetRoles(uniqueEmployees)
+    })
+    .catch((err) => console.error('Promise rejected:', err))
+}
+
+const updateGetRoles = (employeeNames) => {
+  const roles = new Promise((resolve, reject) => {
+    connection.query('SELECT title FROM role', (err, results) => {
+      if (err) reject(new Error('There was an error: ', err));
+      resolve(results)
+    })
+  })
+
+  roles.then((results) => {
+      const rolesArray = results.map((i) => i.title);
+      const uniqueRoles = [...new Set(rolesArray)];
+      askEmployeeNames(employeeNames, uniqueRoles)
+    })
+    .catch((err) => console.error('Promise rejected:', err))
+}
+
+const askEmployeeNames = (employeesArray, rolesArray) => {
+  inquirer
+    .prompt([{
+        name: 'employee',
+        type: 'list',
+        message: 'What is the name of the employee you would like to update?',
+        choices: employeesArray
+      },
+      {
+        name: 'role',
+        type: 'list',
+        message: 'What is role you would like to give them?',
+        choices: rolesArray
+      }
+    ]).then((answer) => {
+      const query = `SELECT id FROM role WHERE title = '${answer.role}'`
+      connection.query(query, (err, res) => {
+        if (err) throw err;
+        const roleName = answer.role
+        const roleID = res.map((i) => i.id);
+        const uniqueID = [...new Set(roleID)];
+        const newRoleID = uniqueID[0]
+        updateEmployeeRole(answer.employee, roleID, roleName)
+      })
+    }).catch((err) => console.error('Promise rejected:', err))
+}
+
+const updateEmployeeRole = (employeeFullName, role_ID, Role_name) => {
+  const splitEmployeeName = employeeFullName.split(' ')
+  const employeeFirstName = splitEmployeeName[0]
+  const employeeLastName = splitEmployeeName[1]
+  const query = `UPDATE employee SET role_id= ${role_ID} WHERE first_name='${employeeFirstName}' AND last_name='${employeeLastName}'`
+  connection.query(query, (err, res) => {
+    if (err) throw err;
+    console.log(`Updating ${employeeFullName}'s role to ${Role_name} in the Employee Database..\n`);
+    setTimeout(returningPrompt, 1000);
+    setTimeout(start, 3000);
+  })
+}
 
 const addDepartment = () => {
   inquirer
@@ -510,8 +614,7 @@ const addDepartment = () => {
       name: 'department',
       type: 'input',
       message: 'What is the name of the department you would like to add?'
-    }
-    ]).then((answer) => {
+    }]).then((answer) => {
 
       //TODO: need to separate the values of the chosen employee into separate values to be inputted to SQL
       connection.query(`INSERT INTO department (name) VALUES ('${answer.department}')`,
@@ -524,7 +627,7 @@ const addDepartment = () => {
         }
       )
     }).catch((err) => console.error('Promise rejected:', err))
-} 
+}
 
 // connect to the mysql server and sql database
 connection.connect((err) => {
