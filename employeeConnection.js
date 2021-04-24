@@ -204,7 +204,6 @@ const employeesByManager = () => {
       parsedManagers = managers.map((i) => i.manager);
       let uniqueManagers = [...new Set(parsedManagers)];
       const filteredManagers = uniqueManagers.filter(n => n)
-      console.log("this is filtered managers", filteredManagers)
       askManager(filteredManagers)
     };
     //this runs the above functino
@@ -286,10 +285,10 @@ const removeEmployee = () => {
       })
     })
 
-getEmployees.then((employeeList) => {
-    askEmployee(employeeList)
-  })
-  .catch((err) => console.error('Promise rejected:', err))
+  getEmployees.then((employeeList) => {
+      askEmployee(employeeList)
+    })
+    .catch((err) => console.error('Promise rejected:', err))
 }
 
 
@@ -363,7 +362,6 @@ const getEmployeeInformation = () => {
       let uniqueManagers = [...new Set(parsedManagers)];
       const filteredManagers = uniqueManagers.filter(n => n)
       filteredManagers.push("none")
-      console.log("this is filtered managers", filteredManagers)
       getRoles(filteredManagers)
     };
     cleanManagers(results)
@@ -450,11 +448,11 @@ const addEmployeeQuery = (firstName, lastName, role, managerNumber) => {
     query = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ('${firstName}', '${lastName}','${role}','${managerNumber}')`
 
   }
+  console.log(query)
   const queryPromise =
     new Promise((resolve, reject) => {
       connection.query(query, (err, res) => {
         if (err) reject(new Error('There was an error: ', err));
-        console.log(`Adding ${res.affectedRows} to the database!\n`);
         resolve(res)
       })
     })
@@ -487,11 +485,8 @@ const getDepartmentIDAddRole = (roleTitle, roleSalary, departmentName) => {
     })
   })
   getDepartments.then((departments) => {
-      console.log('thisis departments', departments)
       const departmentObject = departments.map((i) => i.id);
-      console.log('thisis departmentObject', departmentObject)
       const departmentID = departmentObject[0]
-      console.log('thisis departmentID', departmentID)
       addNewRole(roleTitle, roleSalary, departmentID)
     })
     .catch((err) => console.error('Promise rejected:', err))
@@ -499,12 +494,11 @@ const getDepartmentIDAddRole = (roleTitle, roleSalary, departmentName) => {
 
 const addNewRole = (newRole, newSalary, newDepartmentID) => {
   const query = `INSERT INTO role (title, salary, department_id) VALUES ('${newRole}', '${newSalary}','${newDepartmentID}')`
-  console.log(query)
   const addRolePromise =
     new Promise((resolve, reject) => {
       connection.query(query, (err, res) => {
         if (err) reject(new Error('There was an error: ', err));
-        console.log(`Adding ${res.affectedRows} to the database!\n`);
+        console.log(`Adding role ${newRole} into the Database!`)
         resolve(res)
       })
     })
@@ -616,11 +610,9 @@ const addDepartment = () => {
       message: 'What is the name of the department you would like to add?'
     }]).then((answer) => {
 
-      //TODO: need to separate the values of the chosen employee into separate values to be inputted to SQL
       connection.query(`INSERT INTO department (name) VALUES ('${answer.department}')`,
         (err, res) => {
           if (err) throw err;
-          // console.log(`Adding ${res.affectedRows} to the database!\n`);
           console.log(`Adding ${answer.department} to the Employee Database..\n`);
           setTimeout(returningPrompt, 1000);
           setTimeout(start, 3000);
